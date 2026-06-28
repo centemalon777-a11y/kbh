@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scheme of Work — Zenova Study Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const app  = initializeApp({apiKey:"AIzaSyBoKTKQh1FslukdDgp4YTLXDELyC7hSXBs",authDomain:"zenova-ecosystem.firebaseapp.com",projectId:"zenova-ecosystem",storageBucket:"zenova-ecosystem.firebasestorage.app",messagingSenderId:"104804319209",appId:"1:104804319209:web:fb6a4be936ef9447115578"});
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) { window.location.href = 'login.html'; return; }
+    const name = user.displayName || user.email.split('@')[0];
+    const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('userInitials').textContent = initials;
+    document.getElementById('userName').textContent = name;
+
+    const snap = await getDoc(doc(db,'users',user.uid));
+    const data = snap.exists() ? snap.data() : {};
+    window._userProgress = data.progress || {};
+    window._userPlan = data.plan || 'free';
+    renderProgress();
+  });
+
+  function renderProgress() {
+    const p = window._userProgress || {};
+    SUBJECTS.forEach(s => {
+      const pct = Math.min(100, p[s.id] || 0);
+      const el = document.getElementById('prog-' + s.id);
+      if (el) { el.style.width = pct + '%'; el.parentElement.title = pct + '% complete'; }
+    });
+  }
+</script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0A1628;--navy-light:#1a3460;--gold:#F5A623;--gold-light:#FBBF47;
+  --gold-dim:rgba(245,166,35,0.12);--white:#fff;--muted:#64748B;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#2563EB;
+  --font:'Plus Jakarta Sans',sans-serif;--r:14px;--rs:8px;--sb:240px;
+}
+html,body{height:100%;font-family:var(--font);background:#FFFFFF;color:#0A1628;overflow-x:hidden}
+body{display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sb{position:fixed;top:0;left:0;bottom:0;width:var(--sb);background:linear-gradient(180deg,#0A1628 0%,#0D1F3C 100%);display:flex;flex-direction:column;z-index:50;border-right:1px solid rgba(255,255,255,0.06);transition:left .3s}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:22px 18px;border-bottom:1px solid rgba(255,255,255,0.07);text-decoration:none}
+.sb-logo img{height:32px;width:32px;object-fit:contain}
+.sb-logo-txt{font-size:15px;font-weight:800;color:#fff}.sb-logo-txt span{color:var(--gold)}
+.sb-nav{flex:1;padding:14px 10px;overflow-y:auto}
+.nav-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:1.5px;text-transform:uppercase;padding:10px 8px 5px}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--rs);text-decoration:none;color:rgba(255,255,255,0.6);font-size:13.5px;font-weight:500;margin-bottom:2px;transition:all .2s;cursor:pointer;border:none;background:none;width:100%;font-family:var(--font)}
+.ni:hover{background:rgba(255,255,255,0.07);color:#fff}
+.ni.active{background:rgba(37,99,235,0.18);color:#60A5FA}
+.ni .ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.sb-foot{padding:14px;border-top:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:10px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--navy);flex-shrink:0}
+.uname{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(13,27,62,0.55);z-index:45;backdrop-filter:blur(2px)}
+.sb-overlay.show{display:block}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sb);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #E2E8F4;box-shadow:0 1px 8px rgba(10,22,40,0.06);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar h1{font-size:18px;font-weight:800;color:#0A1628}
+.hbg{display:none;flex-direction:column;gap:4px;cursor:pointer;padding:6px;background:none;border:none;margin-left:auto}
+.hbg span{width:20px;height:2px;background:var(--navy);border-radius:2px;display:block}
+.content{padding:28px 32px;flex:1;display:flex;flex-direction:column;gap:24px}
+
+/* ── PAGE HEADER ── */
+.pg-header h2{font-size:22px;font-weight:800;color:#0A1628;margin-bottom:4px}
+.pg-header p{font-size:14px;color:var(--muted)}
+
+/* ── INFO STRIP ── */
+.info-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+}
+.is-card{
+  background:#fff;border:1px solid #E8EDF5;border-radius:var(--r);
+  padding:16px 18px;border-top:3px solid var(--ac,var(--gold));
+  box-shadow:0 2px 8px rgba(10,22,40,0.04);
+}
+.is-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.is-val{font-size:26px;font-weight:800;color:var(--navy)}
+.is-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ── CONTROLS ── */
+.controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:180px;max-width:300px}
+.search-wrap input{width:100%;padding:9px 14px 9px 36px;border:1.5px solid #E2E8F4;border-radius:100px;font-family:var(--font);font-size:13.5px;color:var(--navy);background:#F8FAFC;outline:none;transition:border .2s}
+.search-wrap input:focus{border-color:var(--gold);background:#fff}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap}
+.fbtn{padding:7px 16px;border-radius:100px;font-family:var(--font);font-size:12.5px;font-weight:700;border:1.5px solid #E2E8F4;background:#fff;color:var(--muted);cursor:pointer;transition:all .2s}
+.fbtn:hover{border-color:var(--gold);color:var(--navy)}
+.fbtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.dl-all-btn{
+  margin-left:auto;display:inline-flex;align-items:center;gap:8px;
+  padding:9px 20px;border-radius:100px;background:var(--gold);color:var(--navy);
+  font-family:var(--font);font-size:13px;font-weight:800;border:none;cursor:pointer;
+  transition:all .2s;box-shadow:0 4px 14px rgba(245,166,35,.3);white-space:nowrap;
+}
+.dl-all-btn:hover{background:var(--gold-light);transform:translateY(-1px)}
+
+/* ── SUBJECT CARDS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.schemes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+
+.scheme-card{
+  background:#fff;border:1.5px solid #E8EDF5;border-radius:16px;
+  overflow:hidden;box-shadow:0 2px 10px rgba(10,22,40,0.05);
+  transition:all .25s;animation:fadeUp .35s ease both;
+  border-left:4px solid var(--ac);
+}
+.scheme-card:hover{box-shadow:0 8px 28px rgba(10,22,40,0.10);transform:translateY(-3px)}
+
+.scheme-card-head{
+  padding:18px 20px 14px;display:flex;align-items:center;gap:14px;
+  border-bottom:1px solid #F0F4FA;
+}
+.sc-icon-wrap{
+  width:46px;height:46px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;background:var(--ac-dim,#F5F7FB);
+}
+.sc-head-info{flex:1;min-width:0}
+.sc-head-name{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:2px}
+.sc-head-meta{font-size:12px;color:var(--muted)}
+.sc-head-right{text-align:right;flex-shrink:0}
+.sc-pct{font-size:20px;font-weight:800;color:var(--ac,var(--navy))}
+.sc-pct-lbl{font-size:10px;color:var(--muted);font-weight:600}
+
+/* Progress bar inside card */
+.sc-progress{padding:0 20px 14px}
+.sc-prog-track{height:5px;background:#E8EDF5;border-radius:100px;overflow:hidden;margin-top:4px}
+.sc-prog-fill{height:100%;border-radius:100px;background:var(--ac);transition:width 1s ease;width:0%}
+
+/* Topics list */
+.sc-topics{padding:0 20px 6px}
+.sc-topics-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.topic-chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{
+  font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;
+  background:#F1F5FB;color:#334155;border:1px solid #E2E8F4;
+}
+.chip.done{background:rgba(34,197,94,.1);color:#166534;border-color:rgba(34,197,94,.25)}
+.chip.week{background:rgba(245,166,35,.12);color:#92400E;border-color:rgba(245,166,35,.3)}
+
+/* Weeks row */
+.sc-weeks{padding:10px 20px;border-top:1px solid #F0F4FA;display:flex;gap:4px;flex-wrap:wrap}
+.wk-dot{
+  width:22px;height:22px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:800;cursor:default;
+  background:#F1F5FB;color:#94A3B8;border:1px solid #E2E8F4;
+}
+.wk-dot.done{background:rgba(34,197,94,.15);color:#166534;border-color:rgba(34,197,94,.3)}
+.wk-dot.current{background:var(--ac);color:#fff;border-color:var(--ac)}
+
+/* Actions */
+.sc-actions{padding:14px 20px;border-top:1px solid #F0F4FA;display:flex;gap:8px}
+.btn-dl{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 14px;border-radius:100px;font-family:var(--font);
+  font-size:13px;font-weight:700;background:var(--ac);color:#fff;
+  border:none;cursor:pointer;transition:all .2s;text-decoration:none;
+}
+.btn-dl:hover{opacity:.88;transform:translateY(-1px)}
+.btn-test{
+  padding:10px 16px;border-radius:100px;font-family:var(--font);
+  font-size:13px;font-weight:700;background:#fff;color:var(--navy);
+  border:1.5px solid #D1D9E8;cursor:pointer;transition:all .2s;
+  text-decoration:none;display:flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.btn-test:hover{background:#F5F7FB;border-color:var(--navy)}
+
+/* ── EMPTY ── */
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;grid-column:1/-1}
+
+/* ── DOWNLOAD TOAST ── */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:#0A1628;color:#fff;font-size:13.5px;font-weight:700;
+  padding:12px 24px;border-radius:100px;z-index:999;
+  box-shadow:0 8px 28px rgba(10,22,40,0.25);transition:transform .3s ease;
+  pointer-events:none;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── HERO CTA ── */
+.hero-cta{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 100%);
+  border-radius:16px;padding:28px 32px;
+  display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+}
+.hero-cta h3{font-size:17px;font-weight:800;color:#fff;margin-bottom:5px}
+.hero-cta p{font-size:13px;color:rgba(255,255,255,.65);line-height:1.5}
+.hero-cta-btn{
+  display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:var(--navy);
+  font-family:var(--font);font-size:13.5px;font-weight:800;
+  padding:12px 24px;border-radius:100px;text-decoration:none;
+  border:none;cursor:pointer;transition:all .2s;white-space:nowrap;
+  box-shadow:0 4px 16px rgba(245,166,35,.35);
+}
+.hero-cta-btn:hover{background:var(--gold-light);transform:translateY(-1px)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){.info-strip{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.schemes-grid{grid-template-columns:1fr}}
+@media(max-width:768px){
+  .sb{left:-100%}.sb.open{left:0}.main{margin-left:0}
+  .topbar{padding:0 16px}.hbg{display:flex}
+  .content{padding:16px 14px;gap:16px}
+  .controls{gap:8px}
+  .dl-all-btn{display:none}
+  .hero-cta{padding:20px}
+}
+@media(max-width:480px){
+  .info-strip{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast">📥 Downloading…</div>
+<div class="sb-overlay" id="sbo" onclick="closeSB()"></div>
+
+<aside class="sb" id="sb">
+  <a href="dashboard.html" class="sb-logo">
+    <img src="https://i.ibb.co/3mkXhHr/zenova-logo.png" onerror="this.style.display='none'" alt=""/>
+    <div class="sb-logo-txt">Zenova<span>Hub</span></div>
+  </a>
+  <nav class="sb-nav">
+    <div class="nav-lbl">Study</div>
+    <a class="ni" href="dashboard.html"><span class="ico">🏠</span>Dashboard</a>
+    <a class="ni" href="subjects.html"><span class="ico">📚</span>Subjects</a>
+    <a class="ni" href="test.html"><span class="ico">📝</span>Weekly CBT Test</a>
+    <a class="ni" href="history.html"><span class="ico">📈</span>Score History</a>
+    <a class="ni" href="certificate.html"><span class="ico">🎓</span>My Certificate</a>
+    <div class="nav-lbl">Resources</div>
+    <a class="ni active" href="scheme.html"><span class="ico">📥</span>Scheme of Work</a>
+    <a class="ni" href="pastquestions.html"><span class="ico">🗂️</span>Past Questions</a>
+    <div class="nav-lbl">Community</div>
+    <a class="ni" href="https://wa.me/your-link" target="_blank"><span class="ico">💬</span>WhatsApp Group</a>
+    <a class="ni" href="index.html#comp"><span class="ico">⚡</span>Competition Aug 29</a>
+    <div class="nav-lbl">Account</div>
+    <a class="ni" href="settings.html"><span class="ico">⚙️</span>Settings</a>
+    <button class="ni" onclick="location.href='login.html'"><span class="ico">🚪</span>Log Out</button>
+  </nav>
+  <div class="sb-foot">
+    <div class="av" id="userInitials">??</div>
+    <div class="uname" id="userName">Loading...</div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <button class="hbg" onclick="openSB()"><span></span><span></span><span></span></button>
+  </header>
+
+  <div class="content">
+
+    <!-- PAGE HEADER -->
+    <div class="pg-header">
+      <h2>JAMB 2027 Scheme of Work 📋</h2>
+      <p>12 subjects · 26 weeks · colour-coded by topic. Download any subject's full PDF scheme below.</p>
+    </div>
+
+    <!-- INFO STRIP -->
+    <div class="info-strip">
+      <div class="is-card" style="--ac:#6366F1">
+        <div class="is-lbl">Total Subjects</div>
+        <div class="is-val">12</div>
+        <div class="is-sub">JAMB 2027 syllabus</div>
+      </div>
+      <div class="is-card" style="--ac:#F5A623">
+        <div class="is-lbl">Weeks Covered</div>
+        <div class="is-val">26</div>
+        <div class="is-sub">Jan – Jun 2027</div>
+      </div>
+      <div class="is-card" style="--ac:#22C55E">
+        <div class="is-lbl">Current Week</div>
+        <div class="is-val">Wk 26</div>
+        <div class="is-sub">Final revision week</div>
+      </div>
+      <div class="is-card" style="--ac:#0EA5E9">
+        <div class="is-lbl">PDF Schemes</div>
+        <div class="is-val">12</div>
+        <div class="is-sub">ready to download</div>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div class="search-wrap">
+        <span class="search-ico">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search subjects…" oninput="filterCards(this.value)"/>
+      </div>
+      <div class="filter-row">
+        <button class="fbtn active" data-f="all"      onclick="setFilter('all',this)">All Subjects</button>
+        <button class="fbtn"        data-f="sciences"  onclick="setFilter('sciences',this)">Sciences</button>
+        <button class="fbtn"        data-f="arts"      onclick="setFilter('arts',this)">Arts</button>
+        <button class="fbtn"        data-f="commercial"onclick="setFilter('commercial',this)">Commercial</button>
+      </div>
+      <button class="dl-all-btn" onclick="downloadAll()">⬇️ Download All (ZIP)</button>
+    </div>
+
+    <!-- SCHEMES GRID -->
+    <div class="schemes-grid" id="schemesGrid"></div>
+
+    <!-- HERO CTA -->
+    <div class="hero-cta">
+      <div>
+        <h3>📅 Week 26 is the final revision week</h3>
+        <p>JAMB 2027 is on February 15. Revise your scheme of work and take this week's CBT test to lock in your scores.</p>
+      </div>
+      <a href="test.html" class="hero-cta-btn">Take Week 26 Test →</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUBJECTS = [
+  {
+    id:'math', name:'Mathematics', icon:'🔢', color:'#6366F1', pdf:'1.pdf',
+    category:'sciences', weeks:26,
+    topics:['Number & Numeration','Algebra','Geometry','Trigonometry','Statistics','Calculus','Indices & Logarithms','Sets & Logic'],
+    highlights:['Quadratic Equations','Coordinate Geometry','Probability','Sequence & Series'],
+  },
+  {
+    id:'physics', name:'Physics', icon:'⚛️', color:'#8B5CF6', pdf:'2.pdf',
+    category:'sciences', weeks:26,
+    topics:['Mechanics','Waves','Electricity','Magnetism','Heat','Optics','Modern Physics','Nuclear Physics'],
+    highlights:['Projectile Motion','Ohm\'s Law','Wave Properties','Radioactivity'],
+  },
+  {
+    id:'chem', name:'Chemistry', icon:'🧪', color:'#EC4899', pdf:'3.pdf',
+    category:'sciences', weeks:26,
+    topics:['Atomic Structure','Chemical Bonding','Stoichiometry','Electrochemistry','Organic Chemistry','Thermochemistry','Rates of Reaction','Equilibrium'],
+    highlights:['Mole Concept','Alkanes/Alkenes','Titration','Periodic Table'],
+  },
+  {
+    id:'bio', name:'Biology', icon:'🌿', color:'#22C55E', pdf:'4.pdf',
+    category:'sciences', weeks:26,
+    topics:['Cell Biology','Genetics','Ecology','Human Physiology','Plant Biology','Evolution','Nutrition','Reproduction'],
+    highlights:['DNA Replication','Photosynthesis','Respiration','Classification'],
+  },
+  {
+    id:'english', name:'English Language', icon:'📚', color:'#0EA5E9', pdf:'5.pdf',
+    category:'arts', weeks:26,
+    topics:['Comprehension','Lexis & Structure','Oral English','Essay Writing','Summary','Grammatical Accuracy','Register','Speech Work'],
+    highlights:['Concord','Register','Antonyms/Synonyms','Cloze Tests'],
+  },
+  {
+    id:'lit', name:'Literature in English', icon:'📖', color:'#F59E0B', pdf:'6.pdf',
+    category:'arts', weeks:26,
+    topics:['Prose Fiction','Poetry','Drama','Literary Devices','African Literature','Oral Literature','Themes & Context','Characterisation'],
+    highlights:['The Lekki Headmaster','Poetic Devices','Plot Analysis','Symbolism'],
+  },
+  {
+    id:'govt', name:'Government', icon:'🏛️', color:'#EF4444', pdf:'7.pdf',
+    category:'arts', weeks:26,
+    topics:['Political Concepts','Nigerian Constitution','Democracy','Electoral Systems','Arms of Government','Federalism','Foreign Policy','International Organisations'],
+    highlights:['1999 Constitution','ECOWAS','Human Rights','Electoral Malpractice'],
+  },
+  {
+    id:'history', name:'History', icon:'📜', color:'#78716C', pdf:'8.pdf',
+    category:'arts', weeks:26,
+    topics:['Pre-Colonial Nigeria','Colonial Rule','Independence & Republic','Civil War','Military Rule','Economic History','Social History','Contemporary Nigeria'],
+    highlights:['Amalgamation 1914','Biafra War','SAP Policy','Democratic Transitions'],
+  },
+  {
+    id:'econ', name:'Economics', icon:'💰', color:'#10B981', pdf:'9.pdf',
+    category:'commercial', weeks:26,
+    topics:['Demand & Supply','National Income','Money & Banking','International Trade','Public Finance','Labour Market','Economic Systems','Development Economics'],
+    highlights:['Price Elasticity','GDP Measurement','Monetary Policy','Comparative Advantage'],
+  },
+  {
+    id:'geo', name:'Geography', icon:'🌍', color:'#14B8A6', pdf:'10.pdf',
+    category:'sciences', weeks:26,
+    topics:['Map Reading','Climate & Weather','Population','Agriculture','Industry','Transportation','Physical Geography','Environmental Issues'],
+    highlights:['Weather Instruments','Contour Maps','Population Census','Migration'],
+  },
+  {
+    id:'agric', name:'Agric Science', icon:'🌾', color:'#84CC16', pdf:'11.pdf',
+    category:'sciences', weeks:26,
+    topics:['Crop Production','Animal Husbandry','Soil Science','Farm Mechanisation','Agricultural Economics','Irrigation','Pest Control','Genetics & Breeding'],
+    highlights:['NPK Fertilisers','Poultry Farming','Soil pH','Crop Rotation'],
+  },
+  {
+    id:'crs', name:'CRS / IRS', icon:'✝️', color:'#A78BFA', pdf:'12.pdf',
+    category:'arts', weeks:26,
+    topics:['Old Testament','New Testament','Islamic Studies','Prophecy','Psalms','Gospels','Epistles','Nigerian Christianity'],
+    highlights:['The Ten Commandments','Life of Jesus','Call of the Prophets','Epistles of Paul'],
+  },
+];
+
+const CURRENT_WEEK = 26;
+let activeFilter = 'all';
+let searchQ      = '';
+
+function openSB()  { document.getElementById('sb').classList.add('open');  document.getElementById('sbo').classList.add('show');  document.body.style.overflow='hidden'; }
+function closeSB() { document.getElementById('sb').classList.remove('open'); document.getElementById('sbo').classList.remove('show'); document.body.style.overflow=''; }
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function filterCards(q) {
+  searchQ = q.toLowerCase();
+  renderGrid();
+}
+
+function getFiltered() {
+  let list = [...SUBJECTS];
+  if (searchQ)            list = list.filter(s => s.name.toLowerCase().includes(searchQ) || s.topics.some(t=>t.toLowerCase().includes(searchQ)));
+  if (activeFilter !== 'all') list = list.filter(s => s.category === activeFilter);
+  return list;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('schemesGrid');
+  const list = getFiltered();
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">🔍</div><p>No subjects match this filter.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = '';
+  list.forEach((s, idx) => {
+    const p   = window._userProgress || {};
+    const pct = Math.min(100, p[s.id] || 0);
+
+    // Week dots: show 1–26, highlight done weeks up to pct-based estimate
+    const donePct   = pct;
+    const doneWeeks = Math.round((donePct / 100) * s.weeks);
+    const MAX_DOTS  = 13; // show first 13 weeks as a preview
+    let dotsHtml = '';
+    for (let w = 1; w <= MAX_DOTS; w++) {
+      const cls = w <= doneWeeks ? 'done' : w === CURRENT_WEEK && w <= MAX_DOTS ? 'current' : '';
+      dotsHtml += `<div class="wk-dot ${cls}" title="Week ${w}">${w}</div>`;
+    }
+    if (s.weeks > MAX_DOTS) {
+      dotsHtml += `<div class="wk-dot" style="font-size:10px;min-width:32px;padding:0 6px">+${s.weeks - MAX_DOTS}</div>`;
+    }
+
+    // Topic chips — show first 5, rest as "+N more"
+    const shown = s.highlights.slice(0, 4);
+    const rest  = s.topics.length - shown.length;
+    const chipsHtml = shown.map(t => `<span class="chip">${t}</span>`).join('')
+      + (rest > 0 ? `<span class="chip">+${rest} more</span>` : '');
+
+    const dim = s.color + '18';
+
+    const card = document.createElement('div');
+    card.className = 'scheme-card';
+    card.style.cssText = `--ac:${s.color};--ac-dim:${dim};animation-delay:${idx*0.04}s`;
+    card.dataset.cat = s.category;
+    card.dataset.name = s.name.toLowerCase();
+
+    card.innerHTML = `
+      <div class="scheme-card-head">
+        <div class="sc-icon-wrap">${s.icon}</div>
+        <div class="sc-head-info">
+          <div class="sc-head-name">${s.name}</div>
+          <div class="sc-head-meta">${s.weeks} weeks · ${s.topics.length} topic areas · JAMB 2027</div>
+        </div>
+        <div class="sc-head-right">
+          <div class="sc-pct">${pct}%</div>
+          <div class="sc-pct-lbl">progress</div>
+        </div>
+      </div>
+
+      <div class="sc-progress">
+        <div class="sc-prog-track">
+          <div class="sc-prog-fill" id="prog-${s.id}" data-w="${pct}"></div>
+        </div>
+      </div>
+
+      <div class="sc-topics">
+        <div class="sc-topics-label">Key Topics</div>
+        <div class="topic-chips">${chipsHtml}</div>
+      </div>
+
+      <div class="sc-weeks">
+        ${dotsHtml}
+      </div>
+
+      <div class="sc-actions">
+        <button class="btn-dl" onclick="downloadScheme('${s.id}','${s.name}','${s.pdf}')">
+          ⬇️ Download PDF
+        </button>
+        <a class="btn-test" href="test.html?subject=${s.id}">
+          📝 Test Now
+        </a>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Animate progress bars
+  setTimeout(() => {
+    document.querySelectorAll('.sc-prog-fill').forEach(el => {
+      el.style.width = (el.dataset.w || 0) + '%';
+    });
+  }, 120);
+}
+
+function downloadScheme(id, name, pdf) {
+  showToast(`📥 Downloading ${name} scheme…`);
+  const a = document.createElement('a');
+  a.href = pdf;
+  a.download = `Zenova-${name.replace(/\s+/g,'-')}-Scheme-2027.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function downloadAll() {
+  showToast('📦 Preparing all 12 schemes…');
+  // In production: link to a pre-zipped bundle
+  const a = document.createElement('a');
+  a.href = 'schemes/zenova-all-schemes-2027.zip';
+  a.download = 'Zenova-All-Schemes-2027.zip';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Init
+renderGrid();
+</script>
+</body>
+</html>

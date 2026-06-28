@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Past Questions — Zenova Study Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const app  = initializeApp({apiKey:"AIzaSyBoKTKQh1FslukdDgp4YTLXDELyC7hSXBs",authDomain:"zenova-ecosystem.firebaseapp.com",projectId:"zenova-ecosystem",storageBucket:"zenova-ecosystem.firebasestorage.app",messagingSenderId:"104804319209",appId:"1:104804319209:web:fb6a4be936ef9447115578"});
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  let currentUid = null;
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) return; // don't block the page — just skip personalization
+    currentUid = user.uid;
+    const name = user.displayName || user.email.split('@')[0];
+    const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    document.getElementById('userInitials').textContent = initials;
+    document.getElementById('userName').textContent = name;
+
+    const snap = await getDoc(doc(db,'users',user.uid));
+    const data = snap.exists() ? snap.data() : {};
+    window._downloadLog = data.pastQDownloads || {};
+    renderGrid();
+  });
+
+  // Log a download to Firestore (best-effort, non-blocking)
+  window._logDownload = async function(key) {
+    if (!currentUid) return;
+    try {
+      await setDoc(doc(db,'users',currentUid), {
+        pastQDownloads: { [key]: increment(1) },
+        pastQDownloadCount: increment(1),
+      }, { merge: true });
+    } catch (e) { /* silent — UX already shows the download */ }
+  };
+</script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0A1628;--navy-light:#1a3460;--gold:#F5A623;--gold-light:#FBBF47;
+  --gold-dim:rgba(245,166,35,0.12);--white:#fff;--muted:#64748B;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#2563EB;
+  --font:'Plus Jakarta Sans',sans-serif;--r:14px;--rs:8px;--sb:240px;
+}
+html,body{height:100%;font-family:var(--font);background:#FFFFFF;color:#0A1628;overflow-x:hidden}
+body{display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sb{position:fixed;top:0;left:0;bottom:0;width:var(--sb);background:linear-gradient(180deg,#0A1628 0%,#0D1F3C 100%);display:flex;flex-direction:column;z-index:50;border-right:1px solid rgba(255,255,255,0.06);transition:left .3s}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:22px 18px;border-bottom:1px solid rgba(255,255,255,0.07);text-decoration:none}
+.sb-logo img{height:32px;width:32px;object-fit:contain}
+.sb-logo-txt{font-size:15px;font-weight:800;color:#fff}.sb-logo-txt span{color:var(--gold)}
+.sb-nav{flex:1;padding:14px 10px;overflow-y:auto}
+.nav-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:1.5px;text-transform:uppercase;padding:10px 8px 5px}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--rs);text-decoration:none;color:rgba(255,255,255,0.6);font-size:13.5px;font-weight:500;margin-bottom:2px;transition:all .2s;cursor:pointer;border:none;background:none;width:100%;font-family:var(--font)}
+.ni:hover{background:rgba(255,255,255,0.07);color:#fff}
+.ni.active{background:rgba(37,99,235,0.18);color:#60A5FA;}
+.ni .ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.sb-foot{padding:14px;border-top:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:10px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--navy);flex-shrink:0}
+.uname{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(13,27,62,0.55);z-index:45;backdrop-filter:blur(2px)}
+.sb-overlay.show{display:block}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sb);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #E2E8F4;box-shadow:0 1px 8px rgba(10,22,40,0.06);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar h1{font-size:18px;font-weight:800;color:#0A1628}
+.hbg{display:none;flex-direction:column;gap:4px;cursor:pointer;padding:6px;background:none;border:none;margin-left:auto}
+.hbg span{width:20px;height:2px;background:var(--navy);border-radius:2px;display:block}
+.content{padding:28px 32px;flex:1;display:flex;flex-direction:column;gap:22px}
+
+/* PAGE HEADER */
+.pg-header h2{font-size:22px;font-weight:800;color:#0A1628;margin-bottom:4px}
+.pg-header p{font-size:14px;color:var(--muted)}
+
+/* INFO STRIP */
+.info-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.is-card{background:#fff;border:1px solid #E8EDF5;border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:2px;box-shadow:0 2px 8px rgba(10,22,40,0.04);border-top:3px solid var(--ac,var(--gold))}
+.is-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px}
+.is-val{font-size:26px;font-weight:800;color:var(--navy)}
+.is-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* CONTROLS */
+.controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px;max-width:320px}
+.search-wrap input{width:100%;padding:9px 14px 9px 36px;border:1.5px solid #E2E8F4;border-radius:100px;font-family:var(--font);font-size:13.5px;color:var(--navy);background:#F8FAFC;outline:none;transition:border .2s}
+.search-wrap input:focus{border-color:var(--gold);background:#fff}
+.search-wrap .search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap}
+.fbtn{padding:7px 16px;border-radius:100px;font-family:var(--font);font-size:12.5px;font-weight:700;border:1.5px solid #E2E8F4;background:#fff;color:var(--muted);cursor:pointer;transition:all .2s}
+.fbtn:hover{border-color:var(--gold);color:var(--navy)}
+.fbtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.q-count{font-size:13px;font-weight:600;color:var(--muted);margin-left:auto;white-space:nowrap}
+
+/* GRID */
+.pq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.pq-card{background:#fff;border:1.5px solid #E8EDF5;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 10px rgba(10,22,40,0.05);transition:all .25s;animation:fadeUp .4s ease both;border-top:3px solid var(--ac)}
+.pq-card:hover{box-shadow:0 8px 28px rgba(10,22,40,0.10);transform:translateY(-3px);border-color:var(--ac)}
+
+.pq-top{display:flex;align-items:center;gap:14px}
+.pq-icon-wrap{width:48px;height:48px;border-radius:12px;background:var(--ac-dim);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.pq-info{flex:1;min-width:0}
+.pq-name{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:3px}
+.pq-meta{font-size:11.5px;color:var(--muted)}
+
+.pq-detail-row{display:flex;gap:0;border:1px solid #E8EDF5;border-radius:10px;overflow:hidden}
+.pq-detail{flex:1;text-align:center;padding:10px 6px;border-right:1px solid #E8EDF5}
+.pq-detail:last-child{border-right:none}
+.pq-d-val{font-size:14px;font-weight:800;color:var(--navy)}
+.pq-d-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
+
+.pq-tags{display:flex;gap:6px;flex-wrap:wrap}
+.pq-tag{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:100px;background:#F1F5F9;color:var(--muted)}
+.pq-tag.with-ans{background:#DCFCE7;color:#16A34A}
+
+.pq-actions{display:flex;gap:8px;margin-top:2px}
+.btn-dl{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:100px;font-family:var(--font);font-size:13px;font-weight:700;color:#fff;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(0,0,0,0.12);background:var(--ac)}
+.btn-dl:hover{opacity:.88;transform:translateY(-1px)}
+.btn-practice{padding:10px 14px;border-radius:100px;font-family:var(--font);font-size:13px;font-weight:700;background:#fff;color:var(--navy);border:1.5px solid #D1D9E8;cursor:pointer;transition:all .2s;white-space:nowrap;text-decoration:none;display:flex;align-items:center}
+.btn-practice:hover{background:#F5F7FB;border-color:var(--navy)}
+
+/* Empty */
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;grid-column:1/-1}
+
+/* HERO CTA */
+.hero-cta{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 100%);border-radius:16px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.hero-cta-text h3{font-size:18px;font-weight:800;color:#fff;margin-bottom:6px}
+.hero-cta-text p{font-size:13.5px;color:rgba(255,255,255,0.65);line-height:1.5}
+.hero-cta-btn{display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:var(--navy);font-family:var(--font);font-size:13.5px;font-weight:800;padding:12px 24px;border-radius:100px;text-decoration:none;white-space:nowrap;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(245,166,35,0.35)}
+.hero-cta-btn:hover{background:var(--gold-light);transform:translateY(-1px)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:12px 22px;border-radius:100px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(10,22,40,0.3);opacity:0;pointer-events:none;transition:all .3s;z-index:100;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.info-strip{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.pq-grid{grid-template-columns:1fr}}
+@media(max-width:768px){
+  .sb{left:-100%}.sb.open{left:0}.main{margin-left:0}
+  .topbar{padding:0 16px}.hbg{display:flex}
+  .content{padding:16px 14px;gap:16px}
+  .hero-cta{padding:20px}
+  .controls{gap:8px}
+  .q-count{display:none}
+}
+@media(max-width:480px){.info-strip{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="sb-overlay" id="sbo" onclick="closeSB()"></div>
+
+<aside class="sb" id="sb">
+  <a href="dashboard.html" class="sb-logo">
+    <img src="https://i.ibb.co/3mkXhHr/zenova-logo.png" onerror="this.style.display='none'" alt=""/>
+    <div class="sb-logo-txt">Zenova<span>Hub</span></div>
+  </a>
+  <nav class="sb-nav">
+    <div class="nav-lbl">Study</div>
+    <a class="ni" href="dashboard.html"><span class="ico">🏠</span>Dashboard</a>
+    <a class="ni" href="subjects.html"><span class="ico">📚</span>Subjects</a>
+    <a class="ni" href="test.html"><span class="ico">📝</span>Weekly CBT Test</a>
+    <a class="ni" href="history.html"><span class="ico">📈</span>Score History</a>
+    <a class="ni" href="certificate.html"><span class="ico">🎓</span>My Certificate</a>
+    <div class="nav-lbl">Resources</div>
+    <a class="ni" href="scheme.html"><span class="ico">📥</span>Scheme of Work</a>
+    <a class="ni active" href="pastquestions.html"><span class="ico">🗂️</span>Past Questions</a>
+    <div class="nav-lbl">Community</div>
+    <a class="ni" href="https://wa.me/your-link" target="_blank"><span class="ico">💬</span>WhatsApp Group</a>
+    <a class="ni" href="index.html#comp"><span class="ico">⚡</span>Competition Aug 29</a>
+    <div class="nav-lbl">Account</div>
+    <a class="ni" href="settings.html"><span class="ico">⚙️</span>Settings</a>
+    <button class="ni" onclick="location.href='login.html'"><span class="ico">🚪</span>Log Out</button>
+  </nav>
+  <div class="sb-foot">
+    <div class="av" id="userInitials">??</div>
+    <div class="uname" id="userName">Loading...</div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <button class="hbg" onclick="openSB()"><span></span><span></span><span></span></button>
+  </header>
+
+  <div class="content">
+
+    <!-- PAGE HEADER -->
+    <div class="pg-header">
+      <h2>JAMB Past Questions 🗂️</h2>
+      <p>Real past JAMB questions organised by subject. Download as PDF or practice in CBT mode.</p>
+    </div>
+
+    <!-- INFO STRIP -->
+    <div class="info-strip">
+      <div class="is-card" style="--ac:#6366F1">
+        <div class="is-lbl">Subjects Covered</div>
+        <div class="is-val">12</div>
+        <div class="is-sub">full JAMB syllabus</div>
+      </div>
+      <div class="is-card" style="--ac:#F5A623">
+        <div class="is-lbl">Avg. Questions</div>
+        <div class="is-val">40</div>
+        <div class="is-sub">per subject paper</div>
+      </div>
+      <div class="is-card" style="--ac:#22C55E">
+        <div class="is-lbl">Total Papers</div>
+        <div class="is-val">60</div>
+        <div class="is-sub">with full answers</div>
+      </div>
+      <div class="is-card" style="--ac:#0EA5E9">
+        <div class="is-lbl">Questions/Paper</div>
+        <div class="is-val">40</div>
+        <div class="is-sub">avg. per subject</div>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div class="search-wrap">
+        <span class="search-ico">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search subjects…" oninput="filterCards(this.value)"/>
+      </div>
+      <div class="filter-row">
+        <button class="fbtn active" data-f="all"        onclick="setFilter('all',this)">All Subjects</button>
+        <button class="fbtn"        data-f="sciences"   onclick="setFilter('sciences',this)">Sciences</button>
+        <button class="fbtn"        data-f="arts"       onclick="setFilter('arts',this)">Arts</button>
+        <button class="fbtn"        data-f="commercial" onclick="setFilter('commercial',this)">Commercial</button>
+      </div>
+      <div class="q-count" id="qCount">12 papers</div>
+    </div>
+
+    <!-- PAST QUESTIONS GRID -->
+    <div class="pq-grid" id="pqGrid"></div>
+
+    <!-- HERO CTA -->
+    <div class="hero-cta">
+      <div class="hero-cta-text">
+        <h3>🎯 Tip: Solve 3 past papers a week</h3>
+        <p>70% of JAMB questions follow patterns from previous years. Pair past questions with the Weekly CBT Test for the fastest improvement.</p>
+      </div>
+      <a href="test.html" class="hero-cta-btn">Take Weekly Test →</a>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUBJECTS = [
+  { id:'math',    name:'Mathematics',           icon:'🔢',  color:'#6366F1', category:'sciences' },
+  { id:'physics', name:'Physics',                icon:'⚛️',  color:'#8B5CF6', category:'sciences' },
+  { id:'chem',    name:'Chemistry',               icon:'🧪',  color:'#EC4899', category:'sciences' },
+  { id:'bio',     name:'Biology',                 icon:'🌿',  color:'#22C55E', category:'sciences' },
+  { id:'geo',     name:'Geography',                icon:'🌍',  color:'#14B8A6', category:'sciences' },
+  { id:'agric',   name:'Agric Science',            icon:'🌾',  color:'#84CC16', category:'sciences' },
+  { id:'english', name:'English Language',         icon:'📚',  color:'#0EA5E9', category:'arts' },
+  { id:'lit',     name:'Literature in English',    icon:'📖',  color:'#F59E0B', category:'arts' },
+  { id:'govt',    name:'Government',               icon:'🏛️',  color:'#EF4444', category:'arts' },
+  { id:'history', name:'History',                  icon:'📜',  color:'#78716C', category:'arts' },
+  { id:'crs',     name:'CRS / IRS',                icon:'✝️',  color:'#A78BFA', category:'arts' },
+  { id:'econ',    name:'Economics',                icon:'💰',  color:'#10B981', category:'commercial' },
+];
+
+let activeFilter = 'all';
+let searchQ      = '';
+
+function openSB()  { document.getElementById('sb').classList.add('open');  document.getElementById('sbo').classList.add('show');  document.body.style.overflow='hidden'; }
+function closeSB() { document.getElementById('sb').classList.remove('open'); document.getElementById('sbo').classList.remove('show'); document.body.style.overflow=''; }
+
+window.setFilter = function(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+};
+
+window.filterCards = function(q) {
+  searchQ = q.toLowerCase();
+  renderGrid();
+};
+
+function getFiltered() {
+  let list = [...SUBJECTS];
+  if (searchQ)                 list = list.filter(s => s.name.toLowerCase().includes(searchQ));
+  if (activeFilter !== 'all')  list = list.filter(s => s.category === activeFilter);
+  return list;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('pqGrid');
+  const list = getFiltered();
+  document.getElementById('qCount').textContent = list.length + ' paper' + (list.length===1?'':'s');
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">🔍</div><p>No subjects match this filter.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = '';
+  const dlLog = window._downloadLog || {};
+  list.forEach((s, idx) => {
+    const key = s.id;
+    const timesDownloaded = dlLog[key] || 0;
+
+    const card = document.createElement('div');
+    card.className = 'pq-card';
+    card.style.cssText = `--ac:${s.color};--ac-dim:${s.color}18;animation-delay:${idx*0.04}s`;
+
+    card.innerHTML = `
+      <div class="pq-top">
+        <div class="pq-icon-wrap">${s.icon}</div>
+        <div class="pq-info">
+          <div class="pq-name">${s.name}</div>
+          <div class="pq-meta">JAMB Official Past Questions</div>
+        </div>
+      </div>
+
+      <div class="pq-detail-row">
+        <div class="pq-detail">
+          <div class="pq-d-val">40</div>
+          <div class="pq-d-lbl">Questions</div>
+        </div>
+        <div class="pq-detail">
+          <div class="pq-d-val">${timesDownloaded || '—'}</div>
+          <div class="pq-d-lbl">Your Downloads</div>
+        </div>
+        <div class="pq-detail">
+          <div class="pq-d-val">~40m</div>
+          <div class="pq-d-lbl">Est. Time</div>
+        </div>
+      </div>
+
+      <div class="pq-tags">
+        <span class="pq-tag with-ans">✓ With Answers</span>
+        <span class="pq-tag">Explanations Included</span>
+      </div>
+
+      <div class="pq-actions">
+        <button class="btn-dl" onclick="downloadPastQ('${s.id}','${s.name}')">⬇️ Download PDF</button>
+        <a class="btn-practice" href="test.html?subject=${s.id}&mode=past">▶ Practice</a>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function downloadPastQ(id, name) {
+  if (window._logDownload) window._logDownload(id);
+  showToast(`📥 Downloading ${name}…`);
+  const a = document.createElement('a');
+  a.href = `pastquestions/${id}.pdf`;
+  a.download = `Zenova-${name.replace(/\s+/g,'-')}-PastQuestions.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Update local download count instantly for UI feedback
+  window._downloadLog = window._downloadLog || {};
+  window._downloadLog[id] = (window._downloadLog[id] || 0) + 1;
+  renderGrid();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Init
+renderGrid();
+</script>
+
+</body>
+</html>
